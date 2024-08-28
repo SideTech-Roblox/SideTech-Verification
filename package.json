@@ -1,0 +1,25 @@
+{
+  "name": "sidetech-verification",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SideTech-Roblox/SideTech-Verification.git"
+  },
+  "author": "SideTech",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/SideTech-Roblox/SideTech-Verification/issues"
+  },
+  "homepage": "https://github.com/SideTech-Roblox/SideTech-Verification#readme",
+  "dependencies": {
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "firebase-admin": "^12.4.0",
+    "noblox.js": "^6.0.2"
+  }
+}
