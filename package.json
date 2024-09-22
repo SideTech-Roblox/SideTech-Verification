@@ -2,7 +2,7 @@
   "name": "sidetech-verification",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "runner.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -19,7 +19,6 @@
   "dependencies": {
     "express": "^4.19.2",
     "express-rate-limit": "^7.4.0",
-    "firebase-admin": "^12.4.0",
-    "noblox.js": "^6.0.2"
+    "firebase-admin": "^12.4.0"
   }
 }
