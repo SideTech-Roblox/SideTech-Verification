@@ -1,4 +1,3 @@
-// DEV-IN-PROGRESS
 const { getFirestore, Timestamp, FieldValue, Filter } = require('firebase-admin/firestore');
 
 const access_file = require("../secret/access.json");
@@ -47,9 +46,27 @@ router.post('/api/create', RateLimiter, async (req, res) => {
 
         if (!foundRoblox && !foundDiscord) {
             if (uid) {
-                // checking if uid exist in database
-                // update
-                // soon >)
+                const uid_DOC = Verification_Collection.doc(uid);
+                const uid_DATA = await uid_DOC.get();
+
+                if (!uid_DATA.exists) {
+                    return res.status(404).json({ status: "404", message: "No data found for the given UID." });
+                };
+
+                if (robloxid) {
+                    const update_data = await uid_DOC.update({
+                        roblox: `${robloxid}`
+                    });
+                };
+
+                if (discordid) {
+                    const update_data = await uid_DOC.update({
+                        discord: `${discordid}`
+                    });
+                };
+
+                const refresh_uid_DATA = await uid_DOC.get();
+                return res.status(200).json({ status: "200", message: "Success!", data: { uid: refresh_uid_DATA.id, roblox: (await refresh_uid_DATA.get()).data().roblox || null, discord: (await refresh_uid_DATA.get()).data().discord || null } });
             } else {
                 if (!robloxid) {
                     return res.status(400).json({ status: "400", message: "Missing query parameter! (robloxid/discordid)" });
