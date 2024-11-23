@@ -1,6 +1,6 @@
 {
   "name": "sidetech-verification",
-  "version": "1.0.0",
+  "version": "1.2",
   "description": "",
   "main": "runner.js",
   "scripts": {
@@ -17,8 +17,8 @@
   },
   "homepage": "https://github.com/SideTech-Roblox/SideTech-Verification#readme",
   "dependencies": {
-    "express": "^4.19.2",
-    "express-rate-limit": "^7.4.0",
-    "firebase-admin": "^12.4.0"
+    "express": "^4.21.1",
+    "express-rate-limit": "^7.4.1",
+    "mongodb": "^6.10.0"
   }
 }
