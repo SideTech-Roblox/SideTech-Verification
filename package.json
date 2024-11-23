@@ -1,7 +1,7 @@
 {
   "name": "sidetech-verification",
   "version": "1.2",
-  "description": "Cross-platform Roblox-Discord verification system for SideTech services.",
+  "description": "Cross-platform verification system for SideTech services.",
   "main": "runner.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
