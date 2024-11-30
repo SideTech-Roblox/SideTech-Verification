@@ -8,4 +8,4 @@ app.use("/", require("./gateway/internal/create"));
 app.use("/", require("./gateway/internal/delete"));
 app.use("/", require("./gateway/public/fetch"));
 
-app.listen(65348, () => console.log(`✅ | :: System - (Verification) :: | API is online!`));
+app.listen(65348, () => console.log(`✅ | :: System - (Verification) :: | Service is online!`));
