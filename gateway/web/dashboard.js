@@ -34,9 +34,24 @@ router.get('/dashboard', RateLimiter, async (req, res) => {
 
             dataCreate = await dataCreate.json();
             req.session.UID = dataCreate.data.uid;
-        };
+        }
 
-        return res.status(200).json({ status: "200", message: "Verified!", data: { uid: UID, roblox: RobloxId, discord: DiscordId } });
+        return res.send(`
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Verification Dashboard</title>
+            </head>
+            <body>
+                <h1>Verification Successful!</h1>
+                <p><strong>Status:</strong> Verified</p>
+                <p><strong>Roblox ID:</strong> ${RobloxId}</p>
+                <p><strong>Discord ID:</strong> ${DiscordId}</p>
+            </body>
+            </html>
+        `);
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: "500", message: "Internal Server Error" });
