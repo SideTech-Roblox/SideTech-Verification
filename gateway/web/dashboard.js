@@ -14,12 +14,7 @@ const RateLimiter = rateLimit({
 
 router.get('/dashboard', RateLimiter, async (req, res) => {
     try {
-        const QueryCallback = req.query.callback;
-        const { UID, RobloxId, DiscordId, Callback } = req.session;
-
-        if (QueryCallback) {
-            Callback = QueryCallback;
-        };
+        const { UID, RobloxId, DiscordId } = req.session;
 
         if (!UID) {
             if (!DiscordId) {
@@ -40,12 +35,9 @@ router.get('/dashboard', RateLimiter, async (req, res) => {
             UID = dataCreate.body.data.uid
         }
 
-        if (Callback) {
-            return res.redirect(Callback);
-        } else {
-            return res.status(200).json({ status: "200", message: "Verified!" });
-        }
+        return res.status(200).json({ status: "200", message: "Verified!" });
     } catch (error) {
+        console.error(error);
         return res.status(500).json({ status: "500", message: "Internal Server Error" });
     }
 });
