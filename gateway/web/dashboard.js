@@ -25,17 +25,33 @@ router.get('/dashboard', RateLimiter, async (req, res) => {
                 return res.redirect('https://apis.roblox.com/oauth/v1/authorize?client_id=3217771915304835690&redirect_uri=https://verification.sidetechroblox.com/verify/roblox&scope=openid%20profile&response_type=code');
             }
 
-            const dataCreate = await fetch(`https://verification.sidetechroblox.com/api/create?robloxid=${RobloxId}&discordid=${DiscordId}`, {
+            let dataCreate = await fetch(`https://verification.sidetechroblox.com/api/create?robloxid=${RobloxId}&discordid=${DiscordId}`, {
                 method: 'POST',
                 headers: {
                     'authorization': access_file.api_key
                 }
             });
 
-            UID = dataCreate.body.data.uid
+            dataCreate = await dataCreate.json();
+            req.session.UID = dataCreate.data.uid;
         }
 
-        return res.status(200).json({ status: "200", message: "Verified!" });
+        return res.send(`
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Verification Dashboard</title>
+            </head>
+            <body>
+                <h1>Verification Successful!</h1>
+                <p><strong>Status:</strong> Verified</p>
+                <p><strong>Roblox ID:</strong> ${RobloxId}</p>
+                <p><strong>Discord ID:</strong> ${DiscordId}</p>
+            </body>
+            </html>
+        `);
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: "500", message: "Internal Server Error" });
