@@ -1,4 +1,3 @@
-const { ObjectId } = require('mongodb');
 const MongoDB_Client = require('../../mongodb/initiate');
 const Verification = MongoDB_Client.db("SideTech").collection("Verification");
 
@@ -6,6 +5,18 @@ const access_file = require("../../secret/access.json");
 
 const express = require("express");
 const router = express.Router();
+
+function generateUID() {
+    let result = '';
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const charactersLength = characters.length;
+    let counter = 0;
+    while (counter < 20) {
+      result += characters.charAt(Math.floor(Math.random() * charactersLength));
+      counter += 1;
+    }
+    return result;
+}
 
 router.post('/api/create', async (req, res) => {
     try {
@@ -67,7 +78,7 @@ router.post('/api/create', async (req, res) => {
 
                 await Verification.insertOne(
                     {
-                        _id: `${new ObjectId().toString()}`,
+                        _id: `${generateUID()}`,
                         data: {
                             discord: `${discordid}`,
                             roblox: `${robloxid}`
