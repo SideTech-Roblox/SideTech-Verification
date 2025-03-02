@@ -63,6 +63,7 @@ router.get('/verify/discord', RateLimiter, async (req, res) => {
             return res.redirect('/dashboard');
         }
     } catch (error) {
+        console.error(error);
         return res.redirect('/dashboard');
     }
 });
