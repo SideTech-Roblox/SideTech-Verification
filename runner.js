@@ -1,4 +1,9 @@
-require('@dotenvx/dotenvx').config();
+const path = require('node:path');
+
+require('@dotenvx/dotenvx').config({
+    path: path.join(__dirname, '.env'),
+    envKeysFile: path.join(__dirname, '.env.keys')
+});
 
 const express = require('express');
 const session = require('express-session');
@@ -16,10 +21,7 @@ app.use(session({
     saveUninitialized: false,
     rolling: true,
     cookie: {
-        maxAge: 3600000,
-        httpOnly: true,
-        secure: true,
-        sameSite: 'lax'
+        maxAge: 3600000
     }
 }));
 
