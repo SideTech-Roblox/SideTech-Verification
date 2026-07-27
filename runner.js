@@ -1,27 +1,31 @@
+require('@dotenvx/dotenvx').config();
+
 const express = require('express');
 const session = require('express-session');
 
-const access_file = require("./secret/access.json");
+const { SESSION_KEY } = require("./gateway/lib/config");
 
 const app = express();
-app.use(express.static("public"));
-app.use(express.json());
+
+app.set('trust proxy', 1);
 
 app.use(session({
     name: '.SIDETECH',
-    secret: access_file.session_key,
+    secret: SESSION_KEY,
     resave: false,
     saveUninitialized: false,
     rolling: true,
     cookie: {
         maxAge: 3600000,
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax'
     }
 }));
 
-app.use("/", require("./gateway/internal/create"));
-app.use("/", require("./gateway/internal/delete"));
 app.use("/", require("./gateway/public/fetch"));
 
+app.use("/", require("./gateway/web/login"));
 app.use("/", require("./gateway/web/dashboard"));
 app.use("/", require("./gateway/web/verify-discord"));
 app.use("/", require("./gateway/web/verify-roblox"));

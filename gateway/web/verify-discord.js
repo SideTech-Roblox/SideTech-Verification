@@ -1,10 +1,8 @@
-const MongoDB_Client = require('../../mongodb/initiate');
-const Verification = MongoDB_Client.db("SideTech").collection("Verification");
-
 const express = require("express");
 const router = express.Router();
 
-const access_file = require("../../secret/access.json");
+const { consumeState, exchangeDiscord } = require("../lib/oauth");
+const { findByDiscord, findByUid, relink, isDeleted } = require("../lib/verification");
 
 const { rateLimit } = require('express-rate-limit');
 const RateLimiter = rateLimit({
@@ -15,56 +13,89 @@ const RateLimiter = rateLimit({
     legacyHeaders: false,
 });
 
+function applyIdentity(req, account) {
+    req.session.DiscordId = account.id;
+    req.session.DiscordName = account.name;
+    req.session.DiscordUsername = account.username;
+    req.session.DiscordAvatar = account.avatar;
+}
+
 router.get('/verify/discord', RateLimiter, async (req, res) => {
     try {
+        if (req.query.error) {
+            return res.redirect('/dashboard?status=denied');
+        }
+
         const code = req.query.code;
-        if (code) {
-            const response = await fetch('https://discord.com/api/oauth2/token', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'Authorization': `Basic ${btoa(access_file.discord_client + ":" + access_file.discord_secret)}`
-                },
-                body: new URLSearchParams({
-                    'grant_type': 'authorization_code',
-                    'code': code,
-                    'redirect_uri': 'https://verification.sidetechroblox.com/verify/discord'
-                }).toString()
-            })
 
-            if (response.ok) {
-                const tokenData = await response.json();
-                const userInfoResponse = await fetch('https://discord.com/api/users/@me', {
-                    headers: {
-                        'Authorization': `Bearer ${tokenData.access_token}`
-                    }
-                });
-    
-                if (userInfoResponse.ok) {
-                    const userInfo = await userInfoResponse.json();
-                    const FetchData = await Verification.findOne({ "data.discord": userInfo.id });
+        if (!code) {
+            return res.redirect('/dashboard?status=failed');
+        }
 
-                    if (FetchData) {
-                        req.session.UID = FetchData["_id"]
-                        req.session.RobloxId = FetchData["data"]["roblox"]
-                        req.session.DiscordId = FetchData["data"]["discord"]
-                    } else {
-                        req.session.DiscordId = userInfo.id
-                    }
+        const pending = consumeState(req, "discord", req.query.state);
 
-                    return res.redirect('/dashboard');
-                } else {
-                    return res.redirect('/dashboard');
-                }
-            } else {
-                return res.redirect('/dashboard');
+        if (!pending) {
+            return res.redirect('/dashboard?status=expired');
+        }
+
+        const account = await exchangeDiscord(code);
+
+        if (!account) {
+            return res.redirect('/dashboard?status=failed');
+        }
+
+        if (pending.intent === "relink") {
+            const record = await findByUid(pending.uid);
+
+            if (!record || record["data"]["discord"] !== req.session.DiscordId) {
+                return res.redirect('/dashboard?status=failed');
             }
-        } else {
+
+            const result = await relink(record["_id"], "discord", account.id);
+
+            if (result.status === "restricted") {
+                return res.redirect('/dashboard?status=restricted');
+            }
+
+            if (result.status === "discord_taken") {
+                return res.redirect('/dashboard?status=discord_taken');
+            }
+
+            if (result.status === "cooldown") {
+                return res.redirect('/dashboard?status=cooldown');
+            }
+
+            if (result.status === "not_found") {
+                return res.redirect('/dashboard?status=failed');
+            }
+
+            applyIdentity(req, account);
+            req.session.UID = result.record.uid;
+            req.session.RobloxId = result.record.roblox;
+
+            return res.redirect(result.status === "unchanged" ? '/dashboard?status=unchanged' : '/dashboard?status=relinked');
+        }
+
+        applyIdentity(req, account);
+        delete req.session.RobloxProfile;
+
+        const found = await findByDiscord(account.id);
+        const FetchData = found && !isDeleted(found) ? found : null;
+
+        if (FetchData) {
+            req.session.UID = FetchData["_id"];
+            req.session.RobloxId = FetchData["data"]["roblox"];
+
             return res.redirect('/dashboard');
         }
+
+        delete req.session.UID;
+        delete req.session.RobloxId;
+
+        return res.redirect(pending.returnTo === '/link/roblox' ? '/link/roblox' : '/dashboard');
     } catch (error) {
         console.error(error);
-        return res.redirect('/dashboard');
+        return res.redirect('/dashboard?status=failed');
     }
 });
 

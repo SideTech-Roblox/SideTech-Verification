@@ -1,7 +1,9 @@
 const express = require("express");
 const router = express.Router();
 
-const access_file = require("../../secret/access.json");
+const { render, loginBody, dashboardBody, errorBody } = require("../lib/page");
+const { fetchRobloxProfile } = require("../lib/roblox");
+const { findByDiscord, configsOf, cooldownRemaining, isDeleted } = require("../lib/verification");
 
 const { rateLimit } = require('express-rate-limit');
 const RateLimiter = rateLimit({
@@ -14,47 +16,64 @@ const RateLimiter = rateLimit({
 
 router.get('/dashboard', RateLimiter, async (req, res) => {
     try {
-        const { UID, RobloxId, DiscordId } = req.session;
+        const status = typeof req.query.status === "string" ? req.query.status : null;
 
-        if (!UID) {
-            if (!DiscordId) {
-                return res.redirect('https://discord.com/oauth2/authorize?client_id=1340683656624078868&response_type=code&redirect_uri=https%3A%2F%2Fverification.sidetechroblox.com%2Fverify%2Fdiscord&scope=identify+openid');
-            }
-
-            if (!RobloxId) {
-                return res.redirect('https://apis.roblox.com/oauth/v1/authorize?client_id=3217771915304835690&redirect_uri=https://verification.sidetechroblox.com/verify/roblox&scope=openid%20profile&response_type=code');
-            }
-
-            let dataCreate = await fetch(`https://verification.sidetechroblox.com/api/create?robloxid=${RobloxId}&discordid=${DiscordId}`, {
-                method: 'POST',
-                headers: {
-                    'authorization': access_file.api_key
-                }
-            });
-
-            dataCreate = await dataCreate.json();
-            req.session.UID = dataCreate.data.uid;
+        if (!req.session.DiscordId) {
+            return res.send(render({ title: "Login", body: loginBody(status) }));
         }
 
-        return res.send(`
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Verification Dashboard</title>
-            </head>
-            <body>
-                <h1>Verification Successful!</h1>
-                <p><strong>Status:</strong> Verified</p>
-                <p><strong>Roblox ID:</strong> ${RobloxId}</p>
-                <p><strong>Discord ID:</strong> ${DiscordId}</p>
-            </body>
-            </html>
-        `);
+        const found = await findByDiscord(req.session.DiscordId);
+
+        const tombstone = found && isDeleted(found) ? found : null;
+        const record = tombstone ? null : found;
+
+        if (record) {
+            req.session.UID = record["_id"];
+
+            if (req.session.RobloxId !== record["data"]["roblox"]) {
+                req.session.RobloxId = record["data"]["roblox"];
+                delete req.session.RobloxProfile;
+            }
+        } else {
+            delete req.session.UID;
+            delete req.session.RobloxId;
+            delete req.session.RobloxProfile;
+        }
+
+        const robloxId = req.session.RobloxId || null;
+
+        if (robloxId && !req.session.RobloxProfile) {
+            req.session.RobloxProfile = await fetchRobloxProfile(robloxId);
+        }
+
+        const lockedUntil = cooldownRemaining(record || tombstone || {});
+        const configs = record ? configsOf(record) : null;
+
+        const body = dashboardBody({
+            status: status,
+            uid: req.session.UID || null,
+            lockedUntil: lockedUntil ? lockedUntil * 1000 : 0,
+            accountStatus: configs ? configs.status : null,
+            publicLookup: configs ? configs.publicLookup : true,
+            tab: req.query.tab === "settings" ? "settings" : "account",
+            discord: {
+                id: req.session.DiscordId,
+                name: req.session.DiscordName || "Unknown",
+                username: req.session.DiscordUsername || null,
+                avatar: req.session.DiscordAvatar || null
+            },
+            roblox: robloxId ? {
+                id: robloxId,
+                name: req.session.RobloxProfile?.name || "Unknown",
+                username: req.session.RobloxProfile?.username || null,
+                avatar: req.session.RobloxProfile?.avatar || null
+            } : null
+        });
+
+        return res.send(render({ title: "Verification", body: body }));
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ status: "500", message: "Internal Server Error" });
+        return res.status(500).send(render({ title: "Error", body: errorBody() }));
     }
 });
 

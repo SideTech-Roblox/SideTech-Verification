@@ -1,7 +1,6 @@
 const { MongoClient } = require("mongodb");
-const { connection_uri } = require("./login.json");
 
-const MongoDB_Client = new MongoClient(connection_uri);
+const MongoDB_Client = new MongoClient(process.env.MONGODB_URI);
 
 MongoDB_Client.connect().then(async () => {
     console.log("✅ | :: MongoDB - (Verification) :: | Connection to database established!")
