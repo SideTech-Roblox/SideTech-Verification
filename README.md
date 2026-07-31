@@ -54,6 +54,6 @@ Every account is in one of three states.
 | `Restricted` | no | no | yes |
 | `Deleted` | no | no | no |
 
-Changing either accounts (Roblox/Discord) — or deleting — starts a **3 month cooldown** that locks both the Discord and Roblox side. It's rolling, so each change starts a fresh 3 months.
+Changing either accounts (Roblox/Discord) — or deleting — starts a **3 month cooldown** that locks both the Discord and Roblox side.
 
 Deleted accounts are kept on file until that cooldown runs out, so the IDs can't be reused straight away. After it expires the old record is cleared automatically the next time either ID is used.
