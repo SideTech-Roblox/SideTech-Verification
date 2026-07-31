@@ -77,7 +77,10 @@ router.get('/verify/roblox', RateLimiter, async (req, res) => {
         if (result.status === "relinked") return res.redirect('/dashboard?status=relinked');
         if (result.status === "unchanged") return res.redirect('/dashboard?status=unchanged');
 
-        return res.redirect('/dashboard?status=linked');
+        const viaDiscord = req.session.viaDiscord === true;
+        delete req.session.viaDiscord;
+
+        return res.redirect(viaDiscord ? '/dashboard?status=linked_discord' : '/dashboard?status=linked');
     } catch (error) {
         console.error(error);
         return res.redirect('/dashboard?status=failed');

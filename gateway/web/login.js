@@ -24,6 +24,8 @@ router.get('/login', RateLimiter, async (req, res) => {
     const verifying = req.query.flow === "verify";
     const returnTo = verifying ? "/link/roblox" : "/dashboard";
 
+    if (verifying) req.session.viaDiscord = true;
+
     if (req.session.DiscordId) {
         if (!verifying) return res.redirect('/dashboard');
 

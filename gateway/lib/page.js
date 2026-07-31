@@ -523,12 +523,13 @@ const STYLES = `
 `;
 
 const BANNERS = {
-    linked: { tone: "success", text: "✅ Your Roblox account has been linked! You can head back to Discord now." },
+    linked: { tone: "success", text: "✅ Your Roblox account has been linked! You're now verified across all SideTech services." },
+    linked_discord: { tone: "success", text: "✅ Your Roblox account has been linked! You can head back to Discord now." },
     relinked: { tone: "success", text: "✅ Your account has been relinked. You won't be able to relink again for 3 months." },
     unchanged: { tone: "info", text: "That account was already the one linked, so nothing changed." },
-    cooldown: { tone: "error", text: "You've relinked recently. Relinking is locked until the countdown below runs out." },
+    cooldown: { tone: "error", text: "You've relinked recently. Relinking is locked until the countdown below ends." },
     restricted: { tone: "error", text: "This account is restricted, so relinking and deleting are disabled. Open a ticket to appeal it." },
-    deleted: { tone: "info", text: "Your verification data has been deleted. You'll be able to verify again once the countdown below runs out." },
+    deleted: { tone: "info", text: "Your verification data has been deleted. You'll be able to verify again when the countdown below ends." },
     public: { tone: "success", text: "✅ Public lookup is on. Anyone can look up your verification." },
     private: { tone: "success", text: "✅ Public lookup is off. Only SideTech services can look up your verification." },
     roblox_taken: { tone: "error", text: "That Roblox account is already linked to a different Discord account." },
@@ -723,10 +724,10 @@ function dashboardBody({ status, discord, roblox, uid, lockedUntil, accountStatu
                     ? onSettings
                         ? 'Account lookup only affects strangers. SideTech services can always see your verification.'
                         : locked
-                            ? 'You&#039;ve relinked recently, so relinking stays locked until the countdown finishes.'
+                            ? 'You&#039;ve relinked recently, so relinking stays locked until the countdown ends.'
                             : 'Use <strong>Relink</strong> to switch either account. Relinking either one locks the relink feature for <strong>3 months</strong>.'
                     : locked
-                        ? 'Verifying again is locked until the countdown runs out. Open a ticket if you think this is wrong.'
+                        ? 'Verifying again is locked until the countdown ends. Open a ticket if you think this is wrong.'
                         : 'You&#039;ll be sent to Roblox to authorise the link. A Roblox account that is already linked to a different Discord account can&#039;t be used.'}
             </p>
         </div>`;
@@ -781,7 +782,7 @@ function deleteBody(error) {
 
             <div class="warn">
                 <strong>This starts a 3 month lock.</strong><br>
-                Both your Discord and Roblox accounts will be blocked from verifying again until it runs out, and this can't be undone from here.
+                Both your Discord and Roblox accounts will be blocked from verifying again for the next 3 months, and this can't be undone from here.
             </div>
 
             ${error ? `<div class="banner error">${escapeHtml(error)}</div>` : ''}
