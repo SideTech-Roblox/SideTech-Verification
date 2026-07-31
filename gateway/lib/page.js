@@ -383,6 +383,55 @@ const STYLES = `
         cursor: not-allowed;
     }
 
+    .notice {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        margin-bottom: 16px;
+        padding: 12px 14px;
+        border-radius: 12px;
+        background: rgba(255, 107, 107, 0.08);
+        border-left: 3px solid var(--accent);
+    }
+
+    .notice-title {
+        font-weight: 600;
+        font-size: 13.5px;
+        color: var(--accent);
+    }
+
+    .notice-sub {
+        font-size: 12.5px;
+        color: var(--text-muted);
+        line-height: 1.45;
+    }
+
+    .confirm-label {
+        display: block;
+        font-size: 13px;
+        color: var(--text-muted);
+        margin-bottom: 8px;
+    }
+
+    .confirm-label strong { color: var(--text); }
+
+    .confirm-input {
+        width: 100%;
+        padding: 11px 14px;
+        border-radius: 10px;
+        font-family: inherit;
+        font-size: 14px;
+        color: var(--text);
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border);
+        outline: none;
+        transition: border-color 0.25s ease;
+    }
+
+    .confirm-input::placeholder { color: rgba(255, 255, 255, 0.25); }
+
+    .confirm-input:focus { border-color: var(--accent); }
+
     .relink.danger {
         color: var(--accent);
         border-color: rgba(255, 107, 107, 0.3);
@@ -590,22 +639,18 @@ function settingsBody({ uid, accountStatus, publicLookup, restricted }) {
 
         ${settingRow({
             title: "Account status",
-            sub: restricted
-                ? 'Relinking and deleting are disabled. Open a ticket to appeal.'
-                : 'Your verification is in good standing.',
+            sub: 'The current standing of your verification.',
             value: accountStatus || "Active"
         })}
 
         ${settingRow({
             title: "Account deletion",
-            sub: restricted
-                ? 'Unavailable while restricted.'
-                : 'Removes your link and locks both accounts for 3 months.',
-            action: restricted ? '' : `<a class="relink danger" href="/delete">Delete</a>`
+            sub: 'Removes your link and locks relinking for 3 months.',
+            action: `<a class="relink danger" href="/delete">Delete</a>`
         })}`;
 }
 
-function accountsBody({ discord, roblox, uid, isLinked, locked, lockedUntil, restricted }) {
+function accountsBody({ discord, roblox, uid, isLinked, locked, lockedUntil }) {
     return `
         ${accountRow({
             label: "Discord",
@@ -624,11 +669,8 @@ function accountsBody({ discord, roblox, uid, isLinked, locked, lockedUntil, res
             locked: locked
         })}
 
-        ${restricted ? `<div class="lock">
-            <span class="lock-label">Account restricted</span>
-            <span class="lock-time">relink &amp; delete disabled</span>
-        </div>` : lockedUntil ? `<div class="lock" data-until="${escapeHtml(lockedUntil)}">
-            <span class="lock-label">Linking locked</span>
+        ${lockedUntil ? `<div class="lock" data-until="${escapeHtml(lockedUntil)}">
+            <span class="lock-label">Relinking locked</span>
             <span class="lock-time">calculating…</span>
         </div>` : ''}`;
 }
@@ -642,7 +684,7 @@ function tabsBody(active) {
 function dashboardBody({ status, discord, roblox, uid, lockedUntil, accountStatus, publicLookup, tab }) {
     const isLinked = Boolean(roblox && roblox.id);
     const restricted = accountStatus === "Restricted";
-    const locked = Boolean(lockedUntil) || restricted;
+    const locked = Boolean(lockedUntil);
     const onSettings = isLinked && tab === "settings";
 
     return `
@@ -658,11 +700,16 @@ function dashboardBody({ status, discord, roblox, uid, lockedUntil, accountStatu
 
             ${isLinked ? tabsBody(onSettings ? 'settings' : 'account') : ''}
 
+            ${restricted ? `<div class="notice">
+                <span class="notice-title">Account restricted</span>
+                <span class="notice-sub">Some features are unavailable. Open a ticket if you believe this is a mistake.</span>
+            </div>` : ''}
+
             ${renderBanner(status)}
 
             ${onSettings
-                ? settingsBody({ uid: uid, accountStatus: accountStatus, publicLookup: publicLookup, restricted: restricted })
-                : accountsBody({ discord, roblox, uid, isLinked, locked, lockedUntil, restricted })}
+                ? settingsBody({ uid: uid, accountStatus: accountStatus, publicLookup: publicLookup })
+                : accountsBody({ discord, roblox, uid, isLinked, locked, lockedUntil })}
 
             <div class="actions">
                 ${isLinked || locked
@@ -675,15 +722,30 @@ function dashboardBody({ status, discord, roblox, uid, lockedUntil, accountStatu
                 ${isLinked
                     ? onSettings
                         ? 'Account lookup only affects strangers. SideTech services can always see your verification.'
-                        : restricted
-                            ? 'Open a ticket to appeal your restriction.'
-                            : locked
-                                ? 'You&#039;ve relinked recently, so both accounts are locked until the countdown finishes.'
-                                : 'Use <strong>Relink</strong> to move either account. Relinking either one locks both for <strong>3 months</strong>.'
+                        : locked
+                            ? 'You&#039;ve relinked recently, so relinking stays locked until the countdown finishes.'
+                            : 'Use <strong>Relink</strong> to switch either account. Relinking either one locks the relink feature for <strong>3 months</strong>.'
                     : locked
                         ? 'Verifying again is locked until the countdown runs out. Open a ticket if you think this is wrong.'
                         : 'You&#039;ll be sent to Roblox to authorise the link. A Roblox account that is already linked to a different Discord account can&#039;t be used.'}
             </p>
+        </div>`;
+}
+
+function restrictedBody() {
+    return `
+        <div class="glass">
+            <h1 class="title">Account restricted</h1>
+            <p class="subtitle">Your account is currently restricted and you do not have access to this feature.</p>
+
+            <div class="warn">
+                If you believe this was a mistake, open a ticket in our Discord server and a staff member will take a look.
+            </div>
+
+            <div class="actions">
+                <a class="btn btn-primary" href="${DISCORD_INVITE}" target="_blank" rel="noopener noreferrer">Open a Ticket</a>
+                <a class="btn btn-secondary" href="/dashboard">Back</a>
+            </div>
         </div>`;
 }
 
@@ -697,7 +759,7 @@ function relinkWarningBody(platform) {
 
             <div class="warn">
                 <strong>This can only be done once every 3 months.</strong><br>
-                Once you relink, both your Discord and Roblox accounts are locked, and you won't be able to relink either of them again until the 3 months are up.
+                Once you relink, the relink feature is locked for both your Discord and Roblox account, and you won't be able to switch either of them again until the 3 months are up.
             </div>
 
             <div class="actions">
@@ -709,7 +771,9 @@ function relinkWarningBody(platform) {
         </div>`;
 }
 
-function deleteBody() {
+const DELETE_PHRASE = "Delete my account";
+
+function deleteBody(error) {
     return `
         <div class="glass">
             <h1 class="title">Delete your data</h1>
@@ -720,9 +784,16 @@ function deleteBody() {
                 Both your Discord and Roblox accounts will be blocked from verifying again until it runs out, and this can't be undone from here.
             </div>
 
-            <form class="actions" method="post" action="/delete">
-                <button class="btn btn-danger" type="submit">Delete my data</button>
-                <a class="btn btn-secondary" href="/dashboard">Cancel</a>
+            ${error ? `<div class="banner error">${escapeHtml(error)}</div>` : ''}
+
+            <form method="post" action="/delete">
+                <label class="confirm-label" for="confirm">Type <strong>${escapeHtml(DELETE_PHRASE)}</strong> to confirm</label>
+                <input class="confirm-input" id="confirm" name="confirm" type="text" autocomplete="off" spellcheck="false" placeholder="${escapeHtml(DELETE_PHRASE)}">
+
+                <div class="actions">
+                    <button class="btn btn-danger" type="submit">Delete my data</button>
+                    <a class="btn btn-secondary" href="/dashboard">Cancel</a>
+                </div>
             </form>
 
             <p class="note">Only want to switch to a different account? Use <strong>Relink</strong> on the dashboard instead — that keeps your verification. Need a hand? <a class="link" href="${DISCORD_INVITE}" target="_blank" rel="noopener noreferrer">Open a ticket</a>.</p>
@@ -811,4 +882,4 @@ function render({ title, body }) {
 </html>`;
 }
 
-module.exports = { render, renderBanner, escapeHtml, loginBody, dashboardBody, errorBody, relinkWarningBody, deleteBody };
+module.exports = { render, renderBanner, escapeHtml, loginBody, dashboardBody, errorBody, relinkWarningBody, deleteBody, restrictedBody, DELETE_PHRASE };

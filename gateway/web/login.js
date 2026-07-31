@@ -4,7 +4,7 @@ const router = express.Router();
 const { WEB_URL } = require("../lib/config");
 const { createState, discordAuthorizeURL, robloxAuthorizeURL } = require("../lib/oauth");
 const { findByDiscord, configsOf, cooldownRemaining, isDeleted, isRestricted, setPublicLookup, deleteLink } = require("../lib/verification");
-const { render, relinkWarningBody, deleteBody } = require("../lib/page");
+const { render, relinkWarningBody, deleteBody, restrictedBody, DELETE_PHRASE } = require("../lib/page");
 
 const { rateLimit } = require('express-rate-limit');
 const RateLimiter = rateLimit({
@@ -74,7 +74,7 @@ router.get('/relink/:platform', RateLimiter, async (req, res) => {
     }
 
     if (isRestricted(record)) {
-        return res.redirect('/dashboard?status=restricted');
+        return res.send(render({ title: "Restricted", body: restrictedBody() }));
     }
 
     if (cooldownRemaining(record)) {
@@ -126,7 +126,7 @@ router.get('/delete', RateLimiter, async (req, res) => {
     }
 
     if (isRestricted(record)) {
-        return res.redirect('/dashboard?status=restricted');
+        return res.send(render({ title: "Restricted", body: restrictedBody() }));
     }
 
     return res.send(render({ title: "Delete", body: deleteBody() }));
@@ -144,7 +144,16 @@ router.post('/delete', RateLimiter, async (req, res) => {
     }
 
     if (isRestricted(record)) {
-        return res.redirect('/dashboard?status=restricted');
+        return res.send(render({ title: "Restricted", body: restrictedBody() }));
+    }
+
+    const typed = typeof req.body?.confirm === "string" ? req.body.confirm.trim() : "";
+
+    if (typed.toLowerCase() !== DELETE_PHRASE.toLowerCase()) {
+        return res.send(render({
+            title: "Delete",
+            body: deleteBody(`Type "${DELETE_PHRASE}" exactly to confirm.`)
+        }));
     }
 
     const { status } = await deleteLink(record["_id"], { cooldown: true });

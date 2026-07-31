@@ -14,6 +14,8 @@ const app = express();
 
 app.set('trust proxy', 1);
 
+app.use(express.urlencoded({ extended: false }));
+
 app.use(session({
     name: '.SIDETECH',
     secret: SESSION_KEY,
