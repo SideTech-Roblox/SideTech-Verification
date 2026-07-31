@@ -1,10 +1,8 @@
-const MongoDB_Client = require('../../mongodb/initiate');
-const Verification = MongoDB_Client.db("SideTech").collection("Verification");
-
 const express = require("express");
 const router = express.Router();
 
-const access_file = require("../../secret/access.json");
+const { consumeState, exchangeRoblox } = require("../lib/oauth");
+const { createLink, relink, findByDiscord, isDeleted } = require("../lib/verification");
 
 const { rateLimit } = require('express-rate-limit');
 const RateLimiter = rateLimit({
@@ -17,53 +15,72 @@ const RateLimiter = rateLimit({
 
 router.get('/verify/roblox', RateLimiter, async (req, res) => {
     try {
-        const code = req.query.code;
-        if (code) {
-            const response = await fetch('https://apis.roblox.com/oauth/v1/token', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'Authorization': `Basic ${btoa(access_file.roblox_client + ":" + access_file.roblox_secret)}`
-                },
-                body: new URLSearchParams({
-                    'grant_type': 'authorization_code',
-                    'code': code
-                }).toString()
-            })
-
-            if (response.ok) {
-                const tokenData = await response.json();
-                const userInfoResponse = await fetch('https://apis.roblox.com/oauth/v1/userinfo', {
-                    headers: {
-                        'Authorization': `Bearer ${tokenData.access_token}`
-                    }
-                });
-
-                if (userInfoResponse.ok) {
-                    const userInfo = await userInfoResponse.json();
-                    const FetchData = await Verification.findOne({ "data.roblox": userInfo.sub });
-
-                    if (FetchData) {
-                        req.session.UID = FetchData["_id"]
-                        req.session.RobloxId = FetchData["data"]["roblox"]
-                        req.session.DiscordId = FetchData["data"]["discord"]
-                    } else {
-                        req.session.RobloxId = userInfo.sub
-                    }
-
-                    return res.redirect('/dashboard');
-                } else {
-                    return res.redirect('/dashboard');
-                }
-            } else {
-                return res.redirect('/dashboard');
-            }
-        } else {
-            return res.redirect('/dashboard');
+        if (req.query.error) {
+            return res.redirect('/dashboard?status=denied');
         }
+
+        const code = req.query.code;
+
+        if (!code) {
+            return res.redirect('/dashboard?status=failed');
+        }
+
+        if (!req.session.DiscordId) {
+            return res.redirect('/login');
+        }
+
+        if (!consumeState(req, "roblox", req.query.state)) {
+            return res.redirect('/dashboard?status=expired');
+        }
+
+        const account = await exchangeRoblox(code);
+
+        if (!account) {
+            return res.redirect('/dashboard?status=failed');
+        }
+
+        const found = await findByDiscord(req.session.DiscordId);
+        const existing = found && !isDeleted(found) ? found : null;
+
+        const result = existing
+            ? await relink(existing["_id"], "roblox", account.id)
+            : await createLink(req.session.DiscordId, account.id);
+
+        if (result.status === "restricted") {
+            return res.redirect('/dashboard?status=restricted');
+        }
+
+        if (result.status === "roblox_taken") {
+            return res.redirect('/dashboard?status=roblox_taken');
+        }
+
+        if (result.status === "discord_taken") {
+            return res.redirect('/dashboard?status=discord_taken');
+        }
+
+        if (result.status === "cooldown") {
+            return res.redirect('/dashboard?status=cooldown');
+        }
+
+        if (result.status === "not_found") {
+            return res.redirect('/dashboard?status=failed');
+        }
+
+        req.session.UID = result.record.uid;
+        req.session.RobloxId = result.record.roblox;
+        req.session.RobloxProfile = {
+            name: account.name,
+            username: account.username,
+            avatar: account.avatar
+        };
+
+        if (result.status === "relinked") return res.redirect('/dashboard?status=relinked');
+        if (result.status === "unchanged") return res.redirect('/dashboard?status=unchanged');
+
+        return res.redirect('/dashboard?status=linked');
     } catch (error) {
         console.error(error);
-        return res.redirect('/dashboard');
+        return res.redirect('/dashboard?status=failed');
     }
 });
 
